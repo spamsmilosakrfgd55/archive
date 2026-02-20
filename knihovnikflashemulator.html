@@ -8,7 +8,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
     <style>
-        /* Globální nastavení - Černá a bílá */
         body {
             background-color: #000000;
             color: #ffffff;
@@ -23,7 +22,6 @@
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
 
-        /* --- Loading Screen (Černé pozadí, bílý text) --- */
         #loading-screen {
             position: fixed;
             top: 0;
@@ -67,7 +65,6 @@
             to { width: 100%; }
         }
 
-        /* --- Fullscreen Game Container --- */
         #game-container {
             width: 100%;
             height: 100%;
@@ -76,16 +73,14 @@
             align-items: center;
         }
 
-        /* Ruffle Player - Čtvercový formát */
         #game-container ruffle-player {
             width: 100%;
             height: 100%;
-            max-width: 100vh; /* Zajistí čtverec i na širokém monitoru */
+            max-width: 100vh;
             max-height: 100vw;
             aspect-ratio: 1 / 1;
         }
 
-        /* --- Branding v levém dolním pruhu --- */
         #arcbin-branding {
             position: absolute;
             bottom: 30px;
@@ -96,9 +91,7 @@
             transition: opacity 0.3s;
         }
 
-        #arcbin-branding:hover {
-            opacity: 1;
-        }
+        #arcbin-branding:hover { opacity: 1; }
 
         .brand-title {
             display: block;
@@ -119,15 +112,8 @@
             transition: background 0.2s, border-color 0.2s;
         }
 
-        .github-link i {
-            margin-right: 8px;
-            font-size: 1.1em;
-        }
-
-        .github-link:hover {
-            background: #222;
-            border-color: #666;
-        }
+        .github-link i { margin-right: 8px; font-size: 1.1em; }
+        .github-link:hover { background: #222; border-color: #666; }
     </style>
 </head>
 <body>
@@ -149,10 +135,44 @@
     </div>
 
     <script src="https://unpkg.com/@ruffle-rs/ruffle"></script>
-    <script>
-        window.RufflePlayer = window.RufflePlayer || {};
 
-        // 1s Loading Logic
+    <script>
+        // --- ARCIBIN FAKE API INTERCEPTOR ---
+        // Musí být definován hned na začátku
+        const originalFetch = window.fetch;
+        window.fetch = async (...args) => {
+            const url = args[0];
+            // Zachytíme dotazy na geewa.com (slovník)
+            if (typeof url === 'string' && url.includes('geewa.com')) {
+                console.log("Arcbin Interceptor: Fake API schvaluje slovo v URL:", url);
+                
+                // Získáme slovo z parametrů (jen pro logování)
+                const wordMatch = url.match(/word=([^&]+)/);
+                const word = wordMatch ? wordMatch[1] : "unknown";
+
+                // Vytvoříme XML odpověď, kterou hra očekává
+                // exists="1" zajistí, že hra slovo uzná
+                const fakeXml = `<?xml version="1.0" encoding="utf-8"?>
+                    <results>
+                        <method name="VerifyWords">
+                            <word val="${word}" exists="1" />
+                        </method>
+                    </results>`;
+
+                return new Response(fakeXml, {
+                    status: 200,
+                    headers: { 'Content-Type': 'text/xml' }
+                });
+            }
+            return originalFetch(...args);
+        };
+
+        window.RufflePlayer = window.RufflePlayer || {};
+        window.RufflePlayer.config = {
+            "allowScriptAccess": true,
+            "networking": "all"
+        };
+
         window.addEventListener("load", () => {
             setTimeout(() => {
                 const loader = document.getElementById("loading-screen");
@@ -171,10 +191,8 @@
             const container = document.getElementById("game-container");
             container.appendChild(player);
             
-            // Název tvého SWF souboru
             player.load("knihovnik.swf");
             
-            // Nastavení pro zachování čtverce v Ruffle
             player.style.width = "100%";
             player.style.height = "100%";
         }
