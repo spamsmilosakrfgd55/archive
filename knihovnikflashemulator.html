@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
     <style>
+        /* Globální nastavení - Černá a bílá */
         body {
             background-color: #000000;
             color: #ffffff;
@@ -22,6 +23,7 @@
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
 
+        /* --- Loading Screen --- */
         #loading-screen {
             position: fixed;
             top: 0;
@@ -65,6 +67,7 @@
             to { width: 100%; }
         }
 
+        /* --- Fullscreen Game Container --- */
         #game-container {
             width: 100%;
             height: 100%;
@@ -81,6 +84,7 @@
             aspect-ratio: 1 / 1;
         }
 
+        /* --- Branding --- */
         #arcbin-branding {
             position: absolute;
             bottom: 30px;
@@ -134,45 +138,70 @@
         </a>
     </div>
 
+    <script>
+        (function() {
+            // Pomocná funkce pro generování falešné XML odpovědi, kterou Knihovník očekává
+            function generateFakeXml(url) {
+                const wordMatch = url.match(/word=([^&]+)/);
+                const word = wordMatch ? wordMatch[1] : "unknown";
+                console.log("Arcbin Archive: Simuluji slovník pro slovo:", decodeURIComponent(word));
+                // Atribut exists="1" je klíč k tomu, aby hra slovo přijala
+                return `<?xml version="1.0" encoding="utf-8"?><results><method name="VerifyWords"><word val="${word}" exists="1" /></method></results>`;
+            }
+
+            // 1. Hack pro moderní fetch požadavky
+            const originalFetch = window.fetch;
+            window.fetch = async (...args) => {
+                const url = args[0];
+                if (typeof url === 'string' && url.includes('geewa.com')) {
+                    return new Response(generateFakeXml(url), {
+                        status: 200,
+                        headers: { 'Content-Type': 'text/xml' }
+                    });
+                }
+                return originalFetch(...args);
+            };
+
+            // 2. Hack pro XMLHttpRequest (který Ruffle používá pro starší Flash komunikaci)
+            const XHR = XMLHttpRequest.prototype;
+            const open = XHR.open;
+            const send = XHR.send;
+
+            XHR.open = function(method, url) {
+                this._url = url;
+                return open.apply(this, arguments);
+            };
+
+            XHR.send = function() {
+                if (this._url && this._url.includes('geewa.com')) {
+                    // Totální simulace úspěšné odpovědi přímo v prohlížeči
+                    Object.defineProperty(this, 'status', { writable: true, value: 200 });
+                    Object.defineProperty(this, 'responseText', { writable: true, value: generateFakeXml(this._url) });
+                    Object.defineProperty(this, 'readyState', { writable: true, value: 4 });
+                    
+                    const self = this;
+                    setTimeout(() => {
+                        if (self.onload) self.onload();
+                        self.dispatchEvent(new Event('load'));
+                        self.dispatchEvent(new Event('readystatechange'));
+                    }, 10);
+                    return;
+                }
+                return send.apply(this, arguments);
+            };
+        })();
+    </script>
+
     <script src="https://unpkg.com/@ruffle-rs/ruffle"></script>
 
     <script>
-        // --- ARCIBIN FAKE API INTERCEPTOR ---
-        // Musí být definován hned na začátku
-        const originalFetch = window.fetch;
-        window.fetch = async (...args) => {
-            const url = args[0];
-            // Zachytíme dotazy na geewa.com (slovník)
-            if (typeof url === 'string' && url.includes('geewa.com')) {
-                console.log("Arcbin Interceptor: Fake API schvaluje slovo v URL:", url);
-                
-                // Získáme slovo z parametrů (jen pro logování)
-                const wordMatch = url.match(/word=([^&]+)/);
-                const word = wordMatch ? wordMatch[1] : "unknown";
-
-                // Vytvoříme XML odpověď, kterou hra očekává
-                // exists="1" zajistí, že hra slovo uzná
-                const fakeXml = `<?xml version="1.0" encoding="utf-8"?>
-                    <results>
-                        <method name="VerifyWords">
-                            <word val="${word}" exists="1" />
-                        </method>
-                    </results>`;
-
-                return new Response(fakeXml, {
-                    status: 200,
-                    headers: { 'Content-Type': 'text/xml' }
-                });
-            }
-            return originalFetch(...args);
-        };
-
         window.RufflePlayer = window.RufflePlayer || {};
         window.RufflePlayer.config = {
             "allowScriptAccess": true,
             "networking": "all"
         };
 
+        // 1s Loading Logic + Inicializace
         window.addEventListener("load", () => {
             setTimeout(() => {
                 const loader = document.getElementById("loading-screen");
@@ -191,6 +220,7 @@
             const container = document.getElementById("game-container");
             container.appendChild(player);
             
+            // Soubor knihovnik.swf musí být ve stejné složce na GitHubu
             player.load("knihovnik.swf");
             
             player.style.width = "100%";
