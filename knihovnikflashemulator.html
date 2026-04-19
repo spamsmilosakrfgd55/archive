@@ -15,8 +15,7 @@
 <body>
     <div id="game-container"></div>
     <div id="arcbin-branding">
-        <span style="display:block; margin-bottom:8px; text-transform:uppercase; font-weight:bold;">Powered by Arcbin</span>
-        <a href="https://github.com/smilos71/arcbin" target="_blank" class="github-link"><i class="fa-brands fa-github"></i> View on GitHub</a>
+
     </div>
 
     <script src="https://unpkg.com/@ruffle-rs/ruffle"></script>
@@ -29,7 +28,7 @@
             const player = ruffle.createPlayer();
             document.getElementById("game-container").appendChild(player);
             
-            player.load("knihovnik.swf");
+            player.load("hm.swf");
 
             // TOTÁLNÍ DESTRUKCE SLOVNÍKU PŘÍMO V RUFFLE
             setInterval(() => {
