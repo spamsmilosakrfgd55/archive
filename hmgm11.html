@@ -1,51 +1,50 @@
 <!DOCTYPE html>
-<html lang="cs">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ruffle Fullscreen Flash Game</title>
+    <title>Knihovník - Arcbin Archive</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
-        /* Vynucení fullscreenu a odstranění okrajů */
-        html, body {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background-color: #000; /* Černé pozadí pod hrou */
-        }
-        
-        #ruffle-container {
-            width: 100%;
-            height: 100%;
-        }
+        body { background: #000; color: #fff; margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; width: 100vw; overflow: hidden; font-family: 'Inter', sans-serif; }
+        #game-container { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
+        #game-container ruffle-player { width: 100%; height: 100%; max-width: 100vh; max-height: 100vw; aspect-ratio: 1 / 1; }
+        #arcbin-branding { position: absolute; bottom: 30px; left: 30px; z-index: 500; font-size: 0.85em; opacity: 0.7; }
+        .github-link { color: #fff; text-decoration: none; border: 1px solid #444; padding: 6px 12px; border-radius: 4px; }
     </style>
 </head>
 <body>
+    <div id="game-container"></div>
+    <div id="arcbin-branding">
 
-    <div id="ruffle-container"></div>
+    </div>
 
     <script src="https://unpkg.com/@ruffle-rs/ruffle"></script>
     <script>
         window.RufflePlayer = window.RufflePlayer || {};
-        
-        window.addEventListener("load", (event) => {
+        window.RufflePlayer.config = { "allowScriptAccess": true, "networking": "all" };
+
+        window.addEventListener("load", () => {
             const ruffle = window.RufflePlayer.newest();
             const player = ruffle.createPlayer();
-            const container = document.getElementById("ruffle-container");
+            document.getElementById("game-container").appendChild(player);
             
-            container.appendChild(player);
-            
-            // Konfigurace: automatické spuštění a skrytí splash obrazovky Ruffle
-            player.config = {
-                "autoplay": "on",
-                "splashScreen": false,
-                "unmuteOverlay": "hidden",
-                "scale": "showAll" // Hra se roztáhne, ale zachová poměr stran
-            };
-            
-            // Načtení vaší hry
-            player.load({ url: "hm.swf" }); // ZDE ZMĚŇTE NA JMÉNO VAŠEHO SOUBORU
+            player.load("hm.swf");
+
+            // TOTÁLNÍ DESTRUKCE SLOVNÍKU PŘÍMO V RUFFLE
+            setInterval(() => {
+                try {
+                    // Cesta 1: Přepsání prototypu (pro nově vytvořené instance)
+                    player.set_variable("com.geewa.knihovnik.Dictionary.prototype.VerifyWords", function(words) {
+                        this.onVerifyWords(words.map(w => ({val: w, exists: "1"})));
+                    });
+                    
+                    // Cesta 2: Přepsání callbacku (pro už běžící instanci)
+                    player.set_variable("com.geewa.knihovnik.Dictionary.prototype.onVerifyWords", function(words) {
+                        for(var i in words) { words[i].exists = "1"; }
+                        this.broadcastMessage("onVerifyWords", words);
+                    });
+                } catch(e) {}
+            }, 100); 
         });
     </script>
 </body>
